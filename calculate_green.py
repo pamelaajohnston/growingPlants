@@ -26,7 +26,8 @@ if __name__ == "__main__":
     source_dir = "../data" # The directory where you store your images
     dest_dir = "../evaluation" # The directory where any images will go
     do_green_analysis = False
-    do_crop = False
+    do_crop = True
+    save_masks = False
 
 
     # arguments
@@ -65,7 +66,7 @@ if __name__ == "__main__":
             l = 200
             r = w - 200
 
-            img_crop = img[t:b, l:r, :]
+            img_crop = img[t:b, l:r, :].copy()
             #print(img_crop.shape)
         else:
             img_crop = img
@@ -76,7 +77,7 @@ if __name__ == "__main__":
         if do_green_analysis: # this is the part where we work out the best green values
             for i in range(0, 3):
                 c = img[:, :, i]
-                print("RGB: Channel {} Maximum {} Minimum {} Mean {}".format(i, np.amax(c), np.amin(c), np.mean(c)))
+                print("RGB[{}]: Maximum {} Minimum {} Mean {}".format(i, np.amax(c), np.amin(c), np.mean(c)))
 
             blue = img.copy()
             blue[:,:,1] = 0
@@ -98,15 +99,10 @@ if __name__ == "__main__":
             # and https://www.rapidtables.com/web/color/RGB_Color.html to pick color
             for i in range(0, 3):
                 c = hsv[:, :, i]
-                print("HSV: Channel {} Maximum {} Minimum {} Mean {}".format(i, np.amax(c), np.amin(c), np.mean(c)))
-        # Threshold of blue in HSV space
-        #lower_green = np.array([60, 35, 140])
-        #upper_green = np.array([180, 255, 255])
-        # Threshold of green in HSV space (as taken from Venus flytrap leaf)
+                print("HSV[{}]: Maximum {} Minimum {} Mean {}".format(i, np.amax(c), np.amin(c), np.mean(c)))
+        # Threshold of green in HSV space (take it from a sample of the plants)
         lower_green = np.array([21, 97, 43])
         upper_green = np.array([64, 255, 255])
-        #lower_green = np.array([(79*255/100), (26*255/100), (32*255/100)])
-        #upper_green = np.array([(153*255/100), (100*255/100), (100*255/100)])
 
         # preparing the mask to overlay
         mask = cv2.inRange(hsv, lower_green, upper_green)
@@ -117,12 +113,12 @@ if __name__ == "__main__":
 
         # The black region in the mask has the value of 0,
         # so when multiplied with original image removes all non-green regions
-        #result = cv2.bitwise_and(img, img, mask = mask)
+        result = cv2.bitwise_and(img_crop, img_crop, mask = mask)
 
-        #cv2.imshow('frame', img)
-        #cv2.imshow('mask', mask)
-        #cv2.imshow('result', result)
-        #cv2.waitKey(0)
+        # save the mask
+        if save_masks:
+            save_file_name = os.path.join(dest_dir, "{}.png".format(imageBaseName))
+            cv2.imwrite(save_file_name, result)
     #lastly, plot the graph
     results_df = pd.DataFrame(result_list, columns=['file', 'green pels'])
     lines = results_df.plot.line(x='file', y='green pels', rot=90)
